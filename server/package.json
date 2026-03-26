@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "postinstall": "prisma generate",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'Linting not configured yet'",
@@ -34,6 +35,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "prisma": "^6.18.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
@@ -43,7 +45,6 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.18.6",
     "@types/uuid": "^10.0.0",
-    "prisma": "^6.18.0",
     "tsx": "^4.19.2",
     "typescript": "^5.9.2"
   }
