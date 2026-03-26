@@ -1,0 +1,1247 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Meta table for storing application metadata
+model Meta {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Backup tracking table for incremental backups
+model BackupTracking {
+  id              Int      @id @default(autoincrement())
+  backupTimestamp DateTime @default(now())
+  backupFileName  String // Removed unique constraint
+  backupLocation  String // 'local' or 'cloud'
+  backupSize      String
+  recordsBackedUp Int      @default(0)
+  companyId       String? // null means all companies
+  status          String   @default("completed") // completed, failed, in_progress
+
+  // Per-table tracking for incremental backups
+  companiesCount                  Int @default(0)
+  accountGroupsCount              Int @default(0)
+  accountsCount                   Int @default(0)
+  itemsCount                      Int @default(0)
+  crateMarkasCount                Int @default(0)
+  arrivalTypesCount               Int @default(0)
+  packingsCount                   Int @default(0)
+  storesCount                     Int @default(0)
+  quickSalesCount                 Int @default(0)
+  quickSaleItemsCount             Int @default(0)
+  crateIssuesCount                Int @default(0)
+  crateIssueItemsCount            Int @default(0)
+  crateReceivesCount              Int @default(0)
+  crateReceiveItemsCount          Int @default(0)
+  vouchersCount                   Int @default(0)
+  voucherItemsCount               Int @default(0)
+  voucherChargesCount             Int @default(0)
+  quickReceiptsCount              Int @default(0)
+  quickReceiptItemsCount          Int @default(0)
+  quickPaymentsCount              Int @default(0)
+  quickPaymentItemsCount          Int @default(0)
+  // Phase 14.1 tables
+  otherChargesHeadsCount          Int @default(0)
+  arrivalsCount                   Int @default(0)
+  arrivalItemsCount               Int @default(0)
+  arrivalChargesCount             Int @default(0)
+  // Phase 15 tables
+  stockSalesCount                 Int @default(0)
+  stockSaleItemsCount             Int @default(0)
+  stockLedgersCount               Int @default(0)
+  sellerBillsCount                Int @default(0)
+  sellerBillItemsCount            Int @default(0)
+  sellerBillChargesCount          Int @default(0)
+  // Phase 17 tables
+  stockTransfersCount             Int @default(0)
+  stockTransferItemsCount         Int @default(0)
+  stockTransferChargesCount       Int @default(0)
+  stockWattaksCount               Int @default(0)
+  stockWattakItemsCount           Int @default(0)
+  stockWattakChargesCount         Int @default(0)
+  stockTransferWattakLedgersCount Int @default(0)
+  // Phase 18.4 tables
+  accountLedgersCount             Int @default(0)
+  accountLedgerItemsCount         Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([backupTimestamp])
+  @@index([companyId])
+  @@index([backupFileName])
+  @@map("backup_tracking")
+}
+
+// Auth Session table for storing authentication data
+model AuthSession {
+  id               Int      @id @default(autoincrement())
+  userId           String
+  userName         String
+  userEmail        String
+  token            String
+  licenseKey       String
+  licenseStartDate String
+  licenseEndDate   String
+  licenseIsTrial   Boolean  @default(false)
+  licenseStatus    String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// Company table for storing company information with embedded financial year
+model Company {
+  id              String  @id
+  companyName     String
+  printName       String?
+  printNameLang   String?
+  addressLine1    String?
+  addressLine2    String?
+  city            String?
+  state           String?
+  countryCode     String?
+  mobile1         String?
+  mobile2         String?
+  email           String?
+  website         String?
+  contactPerson   String?
+  billTitle       String?
+  userId          String
+  companyPassword String?
+
+  // Financial Year fields (embedded)
+  fyStartDate String // Stored as TEXT (ISO date string)
+  fyEndDate   String // Stored as TEXT (ISO date string)
+  fyLabel     String // Format: "2024-2025"
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  AccountLedger AccountLedger[]
+
+  @@map("company")
+}
+
+// Update Info table for storing update check information
+model UpdateInfo {
+  id               Int      @id @default(autoincrement())
+  lastCheckDate    DateTime
+  currentVersion   String
+  availableVersion String?
+  updateAvailable  Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// Account Groups table for organizing accounts (supports 1 level nesting)
+model AccountGroup {
+  id            String   @id @default(uuid())
+  name          String
+  parentGroupId String? // For nested groups (1 level only)
+  level         Int      @default(0) // 0 for primary, 1 for under group
+  companyId     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  parentGroup AccountGroup?  @relation("AccountGroupNesting", fields: [parentGroupId], references: [id], onDelete: Cascade)
+  subGroups   AccountGroup[] @relation("AccountGroupNesting")
+  accounts    Account[]
+
+  @@index([companyId])
+  @@index([parentGroupId])
+  @@map("account_groups")
+}
+
+// Accounts table for managing account ledgers
+model Account {
+  id                        String   @id @default(uuid())
+  accountName               String
+  code                      String?
+  accountGroupId            String
+  companyId                 String
+  openingBalance            Float    @default(0)
+  drCr                      String   @default("Dr") // Dr or Cr
+  area                      String?
+  srNo                      String?
+  crLimit                   Float?
+  nameLang                  String?
+  address                   String?
+  address2                  String?
+  city                      String?
+  state                     String?
+  panNo                     String?
+  mobile1                   String?
+  mobile2                   String?
+  bankName1                 String?
+  accountNo1                String?
+  bankName2                 String?
+  accountNo2                String?
+  contactPerson             String?
+  ledgerFolioNo             String?
+  auditUpto                 String?
+  maintainBillByBillBalance Boolean  @default(false)
+  photo                     String? // Photo path/URL
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  // Relations
+  accountGroup      AccountGroup       @relation(fields: [accountGroupId], references: [id], onDelete: Restrict)
+  crateIssueItems   CrateIssueItem[]
+  crateReceiveItems CrateReceiveItem[]
+  sellerBills       SellerBill[]
+  stockTransfers    StockTransfer[]
+  stockWattaks      StockWattak[]
+  quickReceiptItems QuickReceiptItem[]
+  quickPaymentItems QuickPaymentItem[]
+  accountLedgers    AccountLedger[]
+
+  @@index([companyId])
+  @@index([accountGroupId])
+  @@index([accountName])
+  @@map("accounts")
+}
+
+// Items table for managing product/inventory items
+model Item {
+  id                           String   @id @default(uuid())
+  companyId                    String
+  itemName                     String
+  code                         String?
+  printAs                      String?
+  printAsLang                  String?
+  commission                   Float    @default(0)
+  commissionAsPer              String?
+  marketFees                   Float    @default(0)
+  rdf                          Float    @default(0)
+  bardanaPerNug                Float    @default(0)
+  laga                         Float    @default(0)
+  wtPerNug                     Float    @default(0)
+  kaatPerNug                   Float    @default(0)
+  maintainCratesInSalePurchase Boolean  @default(false)
+  disableWeight                Boolean  @default(false)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  // Relations
+  stockTransferItems         StockTransferItem[]
+  stockWattakItems           StockWattakItem[]
+  stockTransferWattakLedgers StockTransferWattakLedger[]
+
+  @@index([companyId])
+  @@index([itemName])
+  @@map("items")
+}
+
+// CrateMarka table for managing crate information
+model CrateMarka {
+  id             String   @id @default(uuid())
+  crateMarkaName String
+  printAs        String?
+  opQty          Float    @default(0)
+  cost           Float    @default(0)
+  companyId      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  crateIssueItems   CrateIssueItem[]
+  crateReceiveItems CrateReceiveItem[]
+
+  @@index([companyId])
+  @@index([crateMarkaName])
+  @@map("crate_marka")
+}
+
+// ArrivalType table for managing arrival types (Phase 14.1)
+model ArrivalType {
+  id                     String   @id @default(uuid())
+  companyId              String
+  name                   String
+  purchaseType           String   @default("partyStock") // "partyStock" or "selfPurchase"
+  vehicleNoByDefault     String? // Default vehicle number text
+  autoRoundOffAmount     Boolean  @default(false)
+  askForAdditionalFields Boolean  @default(false)
+  requireForwardingAgent Boolean  @default(false)
+  requireBroker          Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  arrivals Arrival[]
+
+  @@index([companyId])
+  @@index([name])
+  @@map("arrival_type")
+}
+
+// Packing table for managing packing types (Phase 8)
+model Packing {
+  id          String   @id @default(uuid())
+  packingName String
+  calculate   String // "nug" or "weight"
+  divideBy    Float    @default(1)
+  companyId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([packingName])
+  @@map("packing")
+}
+
+// Store table for managing stores (Phase 14.1)
+model Store {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  address   String?
+  address2  String?
+  address3  String?
+  contactNo String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  arrivals Arrival[]
+
+  @@index([companyId])
+  @@index([name])
+  @@map("store")
+}
+
+// OtherChargesHead table for managing charge types (Phase 14.1)
+model OtherChargesHead {
+  id            String   @id @default(uuid())
+  companyId     String
+  headingName   String
+  printAs       String?
+  accountHeadId String? // Account to post
+  chargeType    String   @default("plus") // "plus" or "minus"
+  feedAs        String   @default("absolute") // "absolute", "percentage", "onWeight", "onNug", "onPetti"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  arrivalCharges       ArrivalCharges[]
+  voucherCharges       VoucherCharge[]
+  sellerBillCharges    SellerBillCharge[]
+  stockTransferCharges StockTransferCharge[]
+  stockWattakCharges   StockWattakCharge[]
+
+  @@index([companyId])
+  @@index([headingName])
+  @@map("other_charges_head")
+}
+
+// Arrival table for arrival entries (Phase 14.1)
+model Arrival {
+  id                String   @id @default(uuid())
+  companyId         String
+  date              String // ISO date string
+  voucherNo         String
+  arrivalTypeId     String
+  vehicleChallanNo  String
+  partyId           String // Account ID
+  storeId           String?
+  transport         String? // Additional field
+  challanNo         String? // Additional field
+  remarks           String? // Additional field
+  forwardingAgentId String? // Additional field - Account ID
+  totalNug          Float    @default(0)
+  totalKg           Float    @default(0)
+  basicAmt          Float    @default(0)
+  charges           Float    @default(0)
+  netAmt            Float    @default(0)
+  status            String   @default("pending") // "pending", "sold", "partial"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  arrivalType    ArrivalType      @relation(fields: [arrivalTypeId], references: [id], onDelete: Restrict)
+  store          Store?           @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  items          ArrivalItem[]
+  arrivalCharges ArrivalCharges[]
+
+  @@unique([companyId, voucherNo])
+  @@index([companyId])
+  @@index([date])
+  @@index([arrivalTypeId])
+  @@index([partyId])
+  @@index([storeId])
+  @@map("arrival")
+}
+
+// ArrivalItem table for items in an arrival entry (Phase 14.1)
+model ArrivalItem {
+  id             String   @id @default(uuid())
+  arrivalId      String
+  itemId         String
+  lotNoVariety   String?
+  nug            Float    @default(0)
+  kg             Float    @default(0)
+  rate           Float? // Only for selfPurchase
+  crateMarkaId   String?
+  crateMarkaName String?
+  crateQty       Float?
+  crateRate      Float?
+  crateValue     Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  arrival Arrival @relation(fields: [arrivalId], references: [id], onDelete: Cascade)
+
+  @@index([arrivalId])
+  @@index([itemId])
+  @@map("arrival_item")
+}
+
+// ArrivalCharges table for charges on an arrival entry (Phase 14.1)
+model ArrivalCharges {
+  id             String   @id @default(uuid())
+  arrivalId      String
+  otherChargesId String // References OtherChargesHead
+  onValue        Float?
+  per            Float?
+  atRate         Float?
+  no             Float?
+  plusMinus      String   @default("+") // "+" or "-"
+  amount         Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  arrival          Arrival           @relation(fields: [arrivalId], references: [id], onDelete: Cascade)
+  otherChargesHead OtherChargesHead  @relation(fields: [otherChargesId], references: [id], onDelete: Restrict)
+  sellerBillCharge SellerBillCharge? @relation("ArrivalChargeLink")
+
+  @@index([arrivalId])
+  @@index([otherChargesId])
+  @@map("arrival_charges")
+}
+
+// QuickSale table for managing quick sale transactions (Phase 10)
+model QuickSale {
+  id        String  @id @default(uuid())
+  companyId String
+  saleDate  String // Stored as TEXT (ISO date string)
+  voucherNo String?
+
+  // Summary fields
+  totalItems         Int   @default(0)
+  totalCrates        Float @default(0)
+  totalNug           Float @default(0)
+  totalWeight        Float @default(0)
+  basicAmount        Float @default(0)
+  commissionExpenses Float @default(0) // comm+exp
+  totalSaleAmount    Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  items QuickSaleItem[]
+
+  @@unique([companyId, voucherNo])
+  @@index([companyId])
+  @@index([saleDate])
+  @@map("quick_sale")
+}
+
+// QuickSaleItem table for individual items in a quick sale transaction (Phase 10)
+model QuickSaleItem {
+  id          String @id @default(uuid())
+  quickSaleId String
+
+  // Item details
+  itemId      String
+  itemName    String // Denormalized for display
+  accountId   String
+  accountName String // Denormalized for display
+
+  // Quantity fields
+  nug         Float  @default(0)
+  kg          Float  @default(0)
+  rate        Float  @default(0)
+  per         String @default("nug") // "nug" or "kg"
+  basicAmount Float  @default(0)
+  totalAmount Float  @default(0)
+
+  // Expense and commission details
+  commission    Float @default(0)
+  commissionPer Float @default(0) // Commission percentage
+  marketFees    Float @default(0)
+  rdf           Float @default(0)
+  bardana       Float @default(0)
+  bardanaAt     Float @default(0)
+  laga          Float @default(0)
+  lagaAt        Float @default(0)
+
+  // Crate fields (conditional - only if maintainCratesInSalePurchase is true)
+  crateMarkaId   String?
+  crateMarkaName String?
+  crateQty       Float?
+  crateRate      Float?
+  crateValue     Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  quickSale QuickSale @relation(fields: [quickSaleId], references: [id], onDelete: Cascade)
+
+  @@index([quickSaleId])
+  @@index([itemId])
+  @@index([accountId])
+  @@map("quick_sale_item")
+}
+
+// QuickReceipt schema (Phase 18.1)
+model QuickReceipt {
+  id          String   @id @default(uuid())
+  companyId   String
+  amount      Float    @default(0)
+  discount    Float    @default(0)
+  totalAmount Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  items QuickReceiptItem[]
+
+  @@index([companyId])
+  @@map("quick_receipt")
+}
+
+model QuickReceiptItem {
+  id                String    @id @default(uuid())
+  quickReceiptId    String
+  receiptId         String?
+  accountId         String
+  amount            Float     @default(0)
+  discount          Float     @default(0)
+  totalAmount       Float     @default(0)
+  remarks           String?
+  paymentMode       String?
+  dateOfTransaction DateTime?
+  accountNo         String?
+  chequeNo          String?
+  transactionId     String?
+  upiId             String?
+  bank              String?
+  branch            String?
+  ifscNo            String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  quickReceipt QuickReceipt @relation(fields: [quickReceiptId], references: [id], onDelete: Cascade)
+  account      Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([quickReceiptId])
+  @@index([accountId])
+  @@map("quick_receipt_item")
+}
+
+// QuickPayment schema (Phase 18.1)
+model QuickPayment {
+  id          String   @id @default(uuid())
+  companyId   String
+  amount      Float    @default(0)
+  discount    Float    @default(0)
+  totalAmount Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  items QuickPaymentItem[]
+
+  @@index([companyId])
+  @@map("quick_payment")
+}
+
+model QuickPaymentItem {
+  id                String    @id @default(uuid())
+  quickPaymentId    String
+  paymentId         String?
+  accountId         String
+  amount            Float     @default(0)
+  discount          Float     @default(0)
+  totalAmount       Float     @default(0)
+  remarks           String?
+  paymentMode       String?
+  dateOfTransaction DateTime?
+  accountNo         String?
+  chequeNo          String?
+  transactionId     String?
+  upiId             String?
+  bank              String?
+  branch            String?
+  ifscNo            String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  quickPayment QuickPayment @relation(fields: [quickPaymentId], references: [id], onDelete: Cascade)
+  account      Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([quickPaymentId])
+  @@index([accountId])
+  @@map("quick_payment_item")
+}
+
+// Voucher table for managing daily sale vouchers (Phase 12)
+model Voucher {
+  id           String @id @default(uuid())
+  companyId    String
+  voucherNo    String // Auto-generated voucher number
+  voucherDate  String // Stored as TEXT (ISO date string)
+  supplierId   String // Supplier account (party)
+  supplierName String // Denormalized for display
+
+  // Summary fields from Item Entry
+  totalItems       Int   @default(0)
+  totalNug         Float @default(0)
+  totalWeight      Float @default(0)
+  totalBasicAmount Float @default(0)
+  expenseAmount    Float @default(0) // Total expenses
+  commissionAmount Float @default(0) // Total commission
+  buyersAmount     Float @default(0) // basicAmount + expenseAmount + commissionAmount
+  sellersItemValue Float @default(0) // Total seller's item value
+
+  // Charges fields
+  totalOtherCharges Float   @default(0) // Sum of all other charges
+  transport         Float   @default(0)
+  freight           Float   @default(0)
+  grRrNo            String? // GR/RR Number
+  narration         String? // Text field for notes
+  vehicleNo         String?
+  advancePayment    Float   @default(0)
+  roundoff          Float   @default(0)
+
+  // Final totals
+  totalAmount Float @default(0) // sellersItemValue + totalOtherCharges + roundoff
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  items   VoucherItem[]
+  charges VoucherCharge[]
+
+  @@unique([companyId, voucherNo]) // Voucher number unique per company
+  @@index([companyId])
+  @@index([voucherDate])
+  @@index([supplierId])
+  @@map("voucher")
+}
+
+// VoucherItem table for individual items in a voucher (Phase 12)
+model VoucherItem {
+  id        String @id @default(uuid())
+  voucherId String
+
+  // Item details
+  itemId       String
+  itemName     String // Denormalized for display
+  customerId   String // Customer account (buyer)
+  customerName String // Denormalized for display
+
+  // Pricing flags
+  netRate Boolean @default(false) // If true, no commission/expenses added
+
+  // Quantity fields
+  nug           Float  @default(0)
+  weight        Float  @default(0) // kg
+  customerPrice Float  @default(0) // Price for customer
+  supplierPrice Float  @default(0) // Price for supplier
+  per           String @default("nug") // "nug" or "kg"
+
+  // Calculated amounts
+  basicAmount Float @default(0) // Base calculation
+  netAmount   Float @default(0) // After expenses and commission
+
+  // Expense and commission details
+  commission    Float @default(0)
+  commissionPer Float @default(0) // Commission percentage
+  marketFees    Float @default(0)
+  rdf           Float @default(0)
+  bardana       Float @default(0)
+  bardanaAt     Float @default(0)
+  laga          Float @default(0)
+  lagaAt        Float @default(0)
+
+  // Crate fields (conditional - only if maintainCratesInSalePurchase is true)
+  crateMarkaId   String?
+  crateMarkaName String?
+  crateQty       Float?
+  crateRate      Float?
+  crateValue     Float?
+
+  // Seller pricing removed: use `supplierPrice` combined with `nug`/`weight` when needed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  voucher Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+
+  @@index([voucherId])
+  @@index([itemId])
+  @@index([customerId])
+  @@map("voucher_item")
+}
+
+// VoucherCharge table for additional charges in a voucher (Phase 12, updated Phase 14)
+model VoucherCharge {
+  id             String  @id @default(uuid())
+  voucherId      String
+  otherChargesId String? // References OtherChargesHead (optional for backward compatibility)
+
+  // Charge details (legacy fields kept for backward compatibility)
+  chargeName String // Name/type of charge (fallback when otherChargesId is null)
+  onValue    Float  @default(0) // Base value for calculation
+  per        Float? // Per unit value (e.g., per kg)
+  atRate     Float  @default(0) // Rate or percentage
+  no         Float? // Count/number (e.g., number of pettis)
+  plusMinus  String @default("+") // "+" or "-" (add or subtract)
+  amount     Float  @default(0) // Calculated charge amount
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  voucher          Voucher           @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  otherChargesHead OtherChargesHead? @relation(fields: [otherChargesId], references: [id], onDelete: Restrict)
+
+  @@index([voucherId])
+  @@index([otherChargesId])
+  @@map("voucher_charge")
+}
+
+// Crate Issue header (Phase 13)
+model CrateIssue {
+  id               String   @id @default(uuid())
+  companyId        String
+  issueDate        String // ISO date string
+  totalQty         Float    @default(0)
+  totalCrateAmount Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  items CrateIssueItem[]
+
+  @@index([companyId])
+  @@map("crate_issue")
+}
+
+model CrateIssueItem {
+  id           String  @id @default(uuid())
+  crateIssueId String
+  slipNo       String?
+  accountId    String
+  crateMarkaId String
+  qty          Float   @default(0)
+  remarks      String?
+
+  // Source tracking for Quick Sale / Daily Sale integration (Phase 13.7)
+  sourceType String? // 'quick_sale' | 'daily_sale' | null (manual entry)
+  sourceId   String? // QuickSaleItem.id or VoucherItem.id
+  vchNo      String? // Voucher number for display: Q+date for quick sale, voucher.voucherNo for daily sale
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  crateIssue CrateIssue @relation(fields: [crateIssueId], references: [id], onDelete: Cascade)
+  account    Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  crateMarka CrateMarka @relation(fields: [crateMarkaId], references: [id], onDelete: Restrict)
+
+  @@index([crateIssueId])
+  @@index([accountId])
+  @@index([crateMarkaId])
+  @@index([sourceType, sourceId])
+  @@map("crate_issue_item")
+}
+
+// Crate Receive header (Phase 13)
+model CrateReceive {
+  id               String   @id @default(uuid())
+  companyId        String
+  receiveDate      String // ISO date string
+  totalQty         Float    @default(0)
+  totalCrateAmount Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  items CrateReceiveItem[]
+
+  @@index([companyId])
+  @@map("crate_receive")
+}
+
+model CrateReceiveItem {
+  id             String   @id @default(uuid())
+  crateReceiveId String
+  slipNo         String?
+  accountId      String
+  crateMarkaId   String
+  qty            Float    @default(0)
+  remarks        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  crateReceive CrateReceive @relation(fields: [crateReceiveId], references: [id], onDelete: Cascade)
+  account      Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  crateMarka   CrateMarka   @relation(fields: [crateMarkaId], references: [id], onDelete: Restrict)
+
+  @@index([crateReceiveId])
+  @@index([accountId])
+  @@index([crateMarkaId])
+  @@map("crate_receive_item")
+}
+
+// Stock Sale table for selling items from arrival stock (Phase 15)
+model StockSale {
+  id        String  @id @default(uuid())
+  companyId String
+  saleDate  String // ISO date string
+  voucherNo String?
+
+  // Summary fields
+  totalNug       Float @default(0)
+  totalKg        Float @default(0)
+  basicAmount    Float @default(0)
+  supplierAmount Float @default(0) // Amount to be paid to supplier
+  customerAmount Float @default(0) // Amount to be received from customers
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  items       StockSaleItem[]
+  sellerBills SellerBill[]
+
+  @@unique([companyId, voucherNo])
+  @@index([companyId])
+  @@index([saleDate])
+  @@map("stock_sale")
+}
+
+// Stock Sale Item table for individual items in a stock sale (Phase 15)
+model StockSaleItem {
+  id          String @id @default(uuid())
+  stockSaleId String
+
+  // Supplier and Store (moved from StockSale for item-level tracking)
+  supplierId   String // Supplier account (party from arrival)
+  supplierName String? // Denormalized for display
+  storeId      String? // Store where stock is located
+  storeName    String? // Denormalized for display
+
+  // Item details
+  itemId       String
+  itemName     String // Denormalized for display
+  customerId   String // Customer account (buyer)
+  customerName String // Denormalized for display
+  lotNoVariety String? // Lot from arrival entry
+
+  // Quantity fields
+  nug          Float  @default(0)
+  kg           Float  @default(0)
+  rate         Float  @default(0) // Base rate
+  customerRate Float  @default(0) // Rate for customer
+  supplierRate Float  @default(0) // Rate for supplier
+  per          String @default("nug") // "nug" or "kg"
+
+  // Calculated amounts
+  basicAmount Float @default(0) // Base calculation
+  netAmount   Float @default(0) // After expenses and commission
+
+  // Expense and commission details
+  commission    Float @default(0)
+  commissionPer Float @default(0) // Commission percentage
+  marketFees    Float @default(0)
+  rdf           Float @default(0)
+  bardana       Float @default(0)
+  bardanaAt     Float @default(0)
+  laga          Float @default(0)
+  lagaAt        Float @default(0)
+
+  // Crate fields (conditional)
+  crateMarkaId   String?
+  crateMarkaName String?
+  crateQty       Float?
+  crateRate      Float?
+  crateValue     Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  stockSale       StockSale        @relation(fields: [stockSaleId], references: [id], onDelete: Cascade)
+  sellerBillItems SellerBillItem[]
+
+  @@index([stockSaleId])
+  @@index([supplierId])
+  @@index([storeId])
+  @@index([itemId])
+  @@index([customerId])
+  @@map("stock_sale_item")
+}
+
+model SellerBill {
+  id              String   @id @default(uuid())
+  companyId       String
+  accountId       String // Supplier account
+  vchNo           String
+  mode            String?
+  vehicleNo       String?
+  stockSaleId     String?
+  totalNug        Float    @default(0)
+  totalKg         Float    @default(0)
+  basicAmount     Float    @default(0)
+  arrivalExpenses Float    @default(0)
+  charges         Float    @default(0)
+  roundOff        Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  stockSale   StockSale?         @relation(fields: [stockSaleId], references: [id], onDelete: SetNull)
+  account     Account            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  items       SellerBillItem[]
+  chargeLines SellerBillCharge[]
+
+  @@unique([companyId, vchNo])
+  @@index([companyId])
+  @@index([accountId])
+  @@index([stockSaleId])
+  @@map("seller_bill")
+}
+
+model SellerBillItem {
+  id              String   @id @default(uuid())
+  sellerBillId    String
+  stockSaleItemId String?  @unique
+  itemId          String
+  lotNo           String?
+  nug             Float    @default(0)
+  kg              Float    @default(0)
+  rate            Float    @default(0)
+  per             String   @default("nug")
+  amount          Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  sellerBill    SellerBill     @relation(fields: [sellerBillId], references: [id], onDelete: Cascade)
+  stockSaleItem StockSaleItem? @relation(fields: [stockSaleItemId], references: [id], onDelete: SetNull)
+
+  @@index([sellerBillId])
+  @@index([itemId])
+  @@map("seller_bill_item")
+}
+
+model SellerBillCharge {
+  id              String   @id @default(uuid())
+  sellerBillId    String
+  otherChargesId  String
+  arrivalChargeId String?  @unique
+  onValue         Float?
+  per             Float?
+  atRate          Float?
+  no              Float?
+  plusMinus       String   @default("+")
+  amount          Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  sellerBill       SellerBill       @relation(fields: [sellerBillId], references: [id], onDelete: Cascade)
+  otherChargesHead OtherChargesHead @relation(fields: [otherChargesId], references: [id], onDelete: Restrict)
+  arrivalCharge    ArrivalCharges?  @relation("ArrivalChargeLink", fields: [arrivalChargeId], references: [id], onDelete: SetNull)
+
+  @@index([sellerBillId])
+  @@index([otherChargesId])
+  @@map("seller_bill_charge")
+}
+
+// Phase 17 - Stock Transfer Schema
+model StockTransfer {
+  id            String   @id @default(uuid())
+  companyId     String
+  accountId     String
+  vchNo         String
+  vehicleNo     String?
+  challanNo     String?
+  remarks       String?
+  driverName    String?
+  fromLocation  String?
+  toLocation    String?
+  freightAmount Float    @default(0)
+  advanceAmount Float    @default(0)
+  totalOurCost  Float    @default(0)
+  totalNug      Float    @default(0)
+  totalWt       Float    @default(0)
+  basicAmount   Float    @default(0)
+  totalCharges  Float    @default(0)
+  totalAmount   Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  account      Account                     @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  items        StockTransferItem[]
+  charges      StockTransferCharge[]
+  wattakLedger StockTransferWattakLedger[]
+  wattakItems  StockWattakItem[]
+
+  @@unique([companyId, vchNo])
+  @@index([companyId])
+  @@index([accountId])
+  @@map("stock_transfer")
+}
+
+model StockTransferItem {
+  id              String   @id @default(uuid())
+  stockTransferId String
+  itemId          String
+  lotNo           String?
+  nug             Float    @default(0)
+  kg              Float    @default(0)
+  rate            Float    @default(0)
+  ourRate         Float    @default(0)
+  per             String   @default("nug")
+  basicAmount     Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  stockTransfer StockTransfer @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+  item          Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@index([stockTransferId])
+  @@index([itemId])
+  @@map("stock_transfer_item")
+}
+
+model StockTransferCharge {
+  id              String   @id @default(uuid())
+  stockTransferId String
+  otherChargesId  String
+  onValue         Float?
+  per             Float?
+  atRate          Float?
+  no              Float?
+  plusMinus       String   @default("+")
+  amount          Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  stockTransfer    StockTransfer    @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+  otherChargesHead OtherChargesHead @relation(fields: [otherChargesId], references: [id], onDelete: Restrict)
+
+  @@index([stockTransferId])
+  @@index([otherChargesId])
+  @@map("stock_transfer_charge")
+}
+
+// Phase 17.5 - Stock Wattak Schema
+model StockWattak {
+  id           String   @id @default(uuid())
+  companyId    String
+  partyId      String
+  vchNo        String
+  vehicleNo    String?
+  challanNo    String?
+  totalNug     Float    @default(0)
+  totalWt      Float    @default(0)
+  basicAmount  Float    @default(0)
+  totalCharges Float    @default(0)
+  roundOff     Float    @default(0)
+  totalAmount  Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  party   Account             @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  items   StockWattakItem[]
+  charges StockWattakCharge[]
+
+  @@unique([companyId, vchNo])
+  @@index([companyId])
+  @@index([partyId])
+  @@map("stock_wattak")
+}
+
+model StockWattakItem {
+  id              String   @id @default(uuid())
+  stockWattakId   String
+  stockTransferId String? // Link to the source stock transfer (nullable for migration)
+  itemId          String
+  lotNo           String?
+  nug             Float    @default(0)
+  wt              Float    @default(0)
+  rate            Float    @default(0)
+  per             String   @default("nug")
+  basicAmount     Float    @default(0)
+  issuedNug       Float    @default(0)
+  balanceNug      Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  stockWattak   StockWattak    @relation(fields: [stockWattakId], references: [id], onDelete: Cascade)
+  stockTransfer StockTransfer? @relation(fields: [stockTransferId], references: [id], onDelete: Restrict)
+  item          Item           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@index([stockWattakId])
+  @@index([stockTransferId])
+  @@index([itemId])
+  @@map("stock_wattak_item")
+}
+
+model StockWattakCharge {
+  id             String   @id @default(uuid())
+  stockWattakId  String
+  otherChargesId String
+  onValue        Float?
+  per            Float?
+  atRate         Float?
+  no             Float?
+  plusMinus      String   @default("+")
+  amount         Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  stockWattak      StockWattak      @relation(fields: [stockWattakId], references: [id], onDelete: Cascade)
+  otherChargesHead OtherChargesHead @relation(fields: [otherChargesId], references: [id], onDelete: Restrict)
+
+  @@index([stockWattakId])
+  @@index([otherChargesId])
+  @@map("stock_wattak_charge")
+}
+
+// Phase 17.6 - Stock Transfer Wattak Ledger for tracking billed quantities
+model StockTransferWattakLedger {
+  id              String  @id @default(uuid())
+  companyId       String
+  stockTransferId String
+  itemId          String
+  lotNo           String?
+
+  // Original quantities from stock transfer
+  transferredNug Float @default(0)
+  transferredWt  Float @default(0)
+
+  // Cumulative billed quantities across all wattaks
+  billedNug Float @default(0)
+  billedWt  Float @default(0)
+
+  // Computed remaining quantities (transferredNug - billedNug, transferredWt - billedWt)
+  // These are maintained programmatically in the service layer
+  remainingNug Float @default(0)
+  remainingWt  Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  stockTransfer StockTransfer @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+  item          Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@unique([stockTransferId, itemId, lotNo])
+  @@index([companyId])
+  @@index([stockTransferId])
+  @@index([itemId])
+  @@index([remainingNug])
+  @@index([remainingWt])
+  @@map("stock_transfer_wattak_ledger")
+}
+
+// Stock Ledger table for maintaining running stock balance (Phase 15)
+model StockLedger {
+  id           String  @id @default(uuid())
+  companyId    String
+  itemId       String
+  lotNoVariety String
+  supplierId   String // Party from arrival
+  storeId      String?
+
+  // Running balance
+  totalNug     Float @default(0) // Total arrived
+  totalKg      Float @default(0) // Total arrived
+  soldNug      Float @default(0) // Total sold
+  soldKg       Float @default(0) // Total sold
+  availableNug Float @default(0) // totalNug - soldNug
+  availableKg  Float @default(0) // totalKg - soldKg
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, itemId, lotNoVariety, supplierId, storeId])
+  @@index([companyId])
+  @@index([supplierId])
+  @@index([itemId])
+  @@index([storeId])
+  @@index([availableNug])
+  @@map("stock_ledger")
+}
+
+// Phase 18.4 - Account Ledger Schema
+model AccountLedger {
+  id        String   @id @default(uuid())
+  companyId String
+  accountId String
+  totalDr   Float    @default(0)
+  totalCr   Float    @default(0)
+  balance   Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  company Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  account Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  items   AccountLedgerItem[]
+
+  @@index([companyId])
+  @@index([accountId])
+  @@map("account_ledger")
+}
+
+model AccountLedgerItem {
+  id              String   @id @default(uuid())
+  accountLedgerId String
+  type            String
+  vchNo           String
+  name            String
+  particulars     String
+  debit           Float    @default(0)
+  credit          Float    @default(0)
+  balance         Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  accountLedger AccountLedger @relation(fields: [accountLedgerId], references: [id], onDelete: Cascade)
+
+  @@index([accountLedgerId])
+  @@map("account_ledger_item")
+}

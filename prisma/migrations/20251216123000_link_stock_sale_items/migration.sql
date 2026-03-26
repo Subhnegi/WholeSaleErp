@@ -1,0 +1,2 @@
+-- This migration is intentionally left blank.
+-- The stockSaleItemId column and index were created in 20251216122021_track_arrival_charges.

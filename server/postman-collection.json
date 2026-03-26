@@ -1,0 +1,247 @@
+{
+  "info": {
+    "name": "whole Sale ERP - License Management API",
+    "description": "API endpoints for user registration, login, and license validation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "subhnegi"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["health"]
+        },
+        "description": "Check if the server is running"
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "GET",
+            "url": "http://localhost:3000/health"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Server is running\",\n  \"timestamp\": \"2025-10-26T00:00:00.000Z\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Register User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/register",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "register"]
+        },
+        "description": "Register a new user with a 7-day trial license"
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": "http://localhost:3000/api/register"
+          },
+          "status": "Created",
+          "code": 201,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"message\": \"User registered successfully\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"name\": \"John Doe\",\n      \"email\": \"john.doe@example.com\",\n      \"createdAt\": \"2025-10-26T00:00:00.000Z\"\n    },\n    \"license\": {\n      \"licenseKey\": \"A1B2-C3D4-E5F6-G7H8\",\n      \"startDate\": \"2025-10-26T00:00:00.000Z\",\n      \"endDate\": \"2025-11-02T00:00:00.000Z\",\n      \"isTrial\": true,\n      \"status\": \"active\"\n    },\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
+        },
+        {
+          "name": "User Already Exists",
+          "originalRequest": {
+            "method": "POST",
+            "url": "http://localhost:3000/api/register"
+          },
+          "status": "Conflict",
+          "code": 409,
+          "_postman_previewlanguage": "json",
+          "body": "{\n  \"success\": false,\n  \"message\": \"User with this email already exists\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Login User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "login"]
+        },
+        "description": "Login user and return user info with license details"
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": "http://localhost:3000/api/login"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"name\": \"John Doe\",\n      \"email\": \"john.doe@example.com\",\n      \"createdAt\": \"2025-10-26T00:00:00.000Z\"\n    },\n    \"license\": {\n      \"licenseKey\": \"A1B2-C3D4-E5F6-G7H8\",\n      \"startDate\": \"2025-10-26T00:00:00.000Z\",\n      \"endDate\": \"2025-11-02T00:00:00.000Z\",\n      \"isTrial\": true,\n      \"status\": \"active\"\n    },\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
+        },
+        {
+          "name": "Invalid Credentials",
+          "originalRequest": {
+            "method": "POST",
+            "url": "http://localhost:3000/api/login"
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "_postman_previewlanguage": "json",
+          "body": "{\n  \"success\": false,\n  \"message\": \"Invalid email or password\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Validate License",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"licenseKey\": \"A1B2-C3D4-E5F6-G7H8\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/validate-license",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "validate-license"]
+        },
+        "description": "Validate a license key and check if it's still active"
+      },
+      "response": [
+        {
+          "name": "Valid License",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"licenseKey\": \"A1B2-C3D4-E5F6-G7H8\"\n}"
+            },
+            "url": "http://localhost:3000/api/validate-license"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"message\": \"License is valid\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"name\": \"John Doe\",\n      \"email\": \"john.doe@example.com\"\n    },\n    \"license\": {\n      \"licenseKey\": \"A1B2-C3D4-E5F6-G7H8\",\n      \"startDate\": \"2025-10-26T00:00:00.000Z\",\n      \"endDate\": \"2025-11-02T00:00:00.000Z\",\n      \"isTrial\": true,\n      \"status\": \"active\"\n    }\n  }\n}"
+        },
+        {
+          "name": "Expired License",
+          "originalRequest": {
+            "method": "POST",
+            "url": "http://localhost:3000/api/validate-license"
+          },
+          "status": "Forbidden",
+          "code": 403,
+          "_postman_previewlanguage": "json",
+          "body": "{\n  \"success\": false,\n  \"message\": \"License has expired\",\n  \"data\": {\n    \"licenseKey\": \"A1B2-C3D4-E5F6-G7H8\",\n    \"endDate\": \"2025-10-25T00:00:00.000Z\",\n    \"status\": \"expired\",\n    \"isTrial\": true\n  }\n}"
+        },
+        {
+          "name": "License Not Found",
+          "originalRequest": {
+            "method": "POST",
+            "url": "http://localhost:3000/api/validate-license"
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "body": "{\n  \"success\": false,\n  \"message\": \"License not found\"\n}"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+Name,Code,Print As,Commision,Commision As Per,Market Fees,RDF,Bardana Per Nug,Laga,Wt Per Nug,Kaat Per Nug,Maintain Crates In Sale & Purchase,Disable Weight
+Appple,A101,Apple,7,Basic Amt (%),2,2,1,2,10,1,T,T
+Orange,O102,Orange,5,On kg,4,5,3,3,20,2,F,T
+Kiwi,K103,Kiwi,3,On kg (%),6,7,5,5,30,3,T,F
+Banana,B103,Banana,5,On Nug,8,9,7,7,40,4,F,F
+Papaya,B204,Papaya,7,On Rate,10,11,9,11,50,5,T,F

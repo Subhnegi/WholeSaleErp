@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // Hashed with bcrypt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  licenses  License[]
+  companies Company[]
+
+  @@map("users")
+}
+
+model License {
+  id         String   @id @default(uuid())
+  licenseKey String   @unique
+  userId     String
+  startDate  DateTime @default(now())
+  endDate    DateTime
+  isTrial    Boolean  @default(true)
+  status     String   @default("active") // active, expired, revoked
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("licenses")
+}
+
+model Company {
+  id              String   @id @default(uuid())
+  companyName     String
+  printName       String?
+  printNameLang   String?
+  addressLine1    String?
+  addressLine2    String?
+  city            String?
+  state           String?
+  countryCode     String?
+  mobile1         String?
+  mobile2         String?
+  email           String?
+  website         String?
+  contactPerson   String?
+  billTitle       String?
+  userId          String
+  companyPassword String?
+  
+  // Financial Year fields (embedded)
+  fyStartDate     DateTime
+  fyEndDate       DateTime
+  fyLabel         String   // Format: "2024-2025"
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountGroups   AccountGroup[]
+  accounts        Account[]
+  items           Item[]
+  crates          CrateMarka[]
+  arrivalTypes    ArrivalType[]
+
+  @@map("companies")
+}
+
+// Account Groups table for organizing accounts (supports 1 level nesting)
+model AccountGroup {
+  id             String         @id @default(uuid())
+  name           String
+  parentGroupId  String?        // For nested groups (1 level only)
+  level          Int            @default(0) // 0 for primary, 1 for under group
+  companyId      String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  // Relations
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parentGroup    AccountGroup?  @relation("AccountGroupNesting", fields: [parentGroupId], references: [id], onDelete: Cascade)
+  subGroups      AccountGroup[] @relation("AccountGroupNesting")
+  accounts       Account[]
+  
+  @@index([companyId])
+  @@index([parentGroupId])
+  @@map("account_groups")
+}
+
+// Accounts table for managing account ledgers
+model Account {
+  id                        String        @id @default(uuid())
+  accountName               String
+  code                      String?
+  accountGroupId            String
+  companyId                 String
+  openingBalance            Float         @default(0)
+  drCr                      String        @default("Dr") // Dr or Cr
+  area                      String?
+  srNo                      String?
+  crLimit                   Float?
+  nameLang                  String?
+  address                   String?
+  address2                  String?
+  city                      String?
+  state                     String?
+  panNo                     String?
+  mobile1                   String?
+  mobile2                   String?
+  bankName1                 String?
+  accountNo1                String?
+  bankName2                 String?
+  accountNo2                String?
+  contactPerson             String?
+  ledgerFolioNo             String?
+  auditUpto                 String?
+  maintainBillByBillBalance Boolean       @default(false)
+  photo                     String?       // Photo path/URL
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+  
+  // Relations
+  company                   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  accountGroup              AccountGroup  @relation(fields: [accountGroupId], references: [id], onDelete: Restrict)
+  
+  @@index([companyId])
+  @@index([accountGroupId])
+  @@index([accountName])
+  @@map("accounts")
+}
+
+// Items table for managing product/inventory items
+model Item {
+  id                           String    @id @default(uuid())
+  companyId                    String
+  itemName                     String
+  code                         String?
+  printAs                      String?
+  printAsLang                  String?
+  commission                   Float     @default(0)
+  commissionAsPer              String?
+  marketFees                   Float     @default(0)
+  rdf                          Float     @default(0)
+  bardanaPerNug                Float     @default(0)
+  laga                         Float     @default(0)
+  wtPerNug                     Float     @default(0)
+  kaatPerNug                   Float     @default(0)
+  maintainCratesInSalePurchase Boolean   @default(false)
+  disableWeight                Boolean   @default(false)
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+  
+  // Relations
+  company                      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@index([companyId])
+  @@index([itemName])
+  @@map("items")
+}
+
+// CrateMarka table for managing crate information
+model CrateMarka {
+  id              String    @id @default(uuid())
+  crateMarkaName  String
+  printAs         String?
+  opQty           Float     @default(0)
+  cost            Float     @default(0)
+  companyId       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@index([companyId])
+  @@index([crateMarkaName])
+  @@map("crate_marka")
+}
+
+// ArrivalType table for managing arrival types (Phase 7)
+model ArrivalType {
+  id                      String    @id @default(uuid())
+  arrivalTypeName         String
+  partyStock              Boolean   @default(false)
+  selfPurchase            Boolean   @default(false)
+  vehicleNo               String?
+  autoRoundoffAmount      Boolean   @default(false)
+  askForAdditionalFields  Boolean   @default(false)
+  requireForwardingAgent  Boolean   @default(false)
+  requireBroker           Boolean   @default(false)
+  companyId               String
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  
+  // Relations
+  company                 Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@index([companyId])
+  @@index([arrivalTypeName])
+  @@map("arrival_type")
+}

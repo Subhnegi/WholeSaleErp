@@ -1,0 +1,25 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+
+/src/generated/prisma
+
+# Development database (SQLite)
+prisma/dev.db
+prisma/dev.db-journal
+dev.db
+.env
+.env.production*
+
+issues&tasks.txt
+requirements.txt
+logs.txt
+mandi.sql
+*.dbml
+node_modules/
+dist/
+out/
+build/
