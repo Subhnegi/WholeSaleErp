@@ -1,6 +1,6 @@
+import './config/env.js';
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
 import companyRoutes from './routes/company.routes.js';
 import accountGroupRoutes from './routes/accountGroup.routes.js';
@@ -9,9 +9,6 @@ import itemRoutes from './routes/item.routes.js';
 import crateRoutes from './routes/crate.routes.js';
 import arrivalTypeRoutes from './routes/arrivalType.routes.js';
 import { SERVER_CONFIG } from './config/constants.js';
-
-// Load environment variables
-dotenv.config();
 
 // Create Express application
 const app: Application = express();
